@@ -241,6 +241,9 @@ impl Decodable2718 for ReceiptEnvelope {
             TxType::Eip4844 => Ok(Self::Eip4844(receipt)),
             TxType::Eip7702 => Ok(Self::Eip7702(receipt)),
             TxType::Legacy => Err(Eip2718Error::UnexpectedType(0)),
+            // NP TODO handle here or in fallback_decode
+            // NP TODO decode using RPL?
+            TxType::LegacyExtended => Err(Eip2718Error::UnexpectedType(0)),
         }
     }
 

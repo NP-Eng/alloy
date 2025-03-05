@@ -24,6 +24,7 @@ use core::fmt;
 /// [2930]: https://eips.ethereum.org/EIPS/eip-2930
 /// [4844]: https://eips.ethereum.org/EIPS/eip-4844
 /// [7702]: https://eips.ethereum.org/EIPS/eip-7702
+// NP TODO doc
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
@@ -41,6 +42,9 @@ pub enum TxType {
     Eip4844 = 3,
     /// EIP-7702 transaction type.
     Eip7702 = 4,
+    // NP TODO
+    /// NP TODO
+    LegacyExtended = 5,
 }
 
 impl From<TxType> for u8 {
@@ -63,6 +67,7 @@ impl fmt::Display for TxType {
             Self::Eip1559 => write!(f, "EIP-1559"),
             Self::Eip4844 => write!(f, "EIP-4844"),
             Self::Eip7702 => write!(f, "EIP-7702"),
+            Self::LegacyExtended => write!(f, "LegacyExtended"),
         }
     }
 }
@@ -96,6 +101,7 @@ impl TryFrom<u8> for TxType {
             2 => Self::Eip1559,
             3 => Self::Eip4844,
             4 => Self::Eip7702,
+            5 => Self::LegacyExtended,
             _ => return Err(Eip2718Error::UnexpectedType(value)),
         })
     }
@@ -178,8 +184,13 @@ pub enum TxEnvelope {
     Eip4844(Signed<TxEip4844Variant>),
     /// A [`TxEip7702`] tagged with type 4.
     Eip7702(Signed<TxEip7702>),
+    // NP TODO
+    /// NP TODO
+    /// A [`LegacyExtended`] tagged with type 5.
+    LegacyExtended(Signed<TxLegacy>),
 }
 
+// NP TODO the ambiguity will solve itself
 impl From<Signed<TxLegacy>> for TxEnvelope {
     fn from(v: Signed<TxLegacy>) -> Self {
         Self::Legacy(v)
@@ -255,6 +266,12 @@ impl TxEnvelope {
         matches!(self, Self::Eip7702(_))
     }
 
+    /// Returns true if the transaction is a legacy extended transaction.
+    #[inline]
+    pub const fn is_legacy_extended(&self) -> bool {
+        matches!(self, Self::LegacyExtended(_))
+    }
+
     /// Returns true if the transaction is replay protected.
     ///
     /// All non-legacy transactions are replay protected, as the chain id is
@@ -311,6 +328,14 @@ impl TxEnvelope {
         }
     }
 
+    /// Returns the [`TxLegacy`] variant if the transaction is a legacy extended transaction.
+    pub const fn as_legacy_extended(&self) -> Option<&Signed<TxLegacy>> {
+        match self {
+            Self::LegacyExtended(tx) => Some(tx),
+            _ => None,
+        }
+    }
+
     /// Recover the signer of the transaction.
     #[cfg(feature = "k256")]
     pub fn recover_signer(
@@ -322,6 +347,7 @@ impl TxEnvelope {
             Self::Eip1559(tx) => tx.recover_signer(),
             Self::Eip4844(tx) => tx.recover_signer(),
             Self::Eip7702(tx) => tx.recover_signer(),
+            Self::LegacyExtended(tx) => tx.recover_signer(),
         }
     }
 
@@ -333,6 +359,7 @@ impl TxEnvelope {
             Self::Eip1559(tx) => tx.signature_hash(),
             Self::Eip4844(tx) => tx.signature_hash(),
             Self::Eip7702(tx) => tx.signature_hash(),
+            Self::LegacyExtended(tx) => tx.signature_hash(),
         }
     }
 
@@ -344,6 +371,7 @@ impl TxEnvelope {
             Self::Eip1559(tx) => tx.signature(),
             Self::Eip4844(tx) => tx.signature(),
             Self::Eip7702(tx) => tx.signature(),
+            Self::LegacyExtended(tx) => tx.signature(),
         }
     }
 
@@ -356,6 +384,7 @@ impl TxEnvelope {
             Self::Eip1559(tx) => tx.hash(),
             Self::Eip4844(tx) => tx.hash(),
             Self::Eip7702(tx) => tx.hash(),
+            Self::LegacyExtended(tx) => tx.hash(),
         }
     }
 
@@ -368,6 +397,7 @@ impl TxEnvelope {
             Self::Eip1559(_) => TxType::Eip1559,
             Self::Eip4844(_) => TxType::Eip4844,
             Self::Eip7702(_) => TxType::Eip7702,
+            Self::LegacyExtended(_) => TxType::LegacyExtended,
         }
     }
 
@@ -379,6 +409,7 @@ impl TxEnvelope {
             Self::Eip1559(t) => t.eip2718_encoded_length(),
             Self::Eip4844(t) => t.eip2718_encoded_length(),
             Self::Eip7702(t) => t.eip2718_encoded_length(),
+            Self::LegacyExtended(t) => t.eip2718_encoded_length(),
         }
     }
 }
@@ -407,6 +438,7 @@ impl Decodable2718 for TxEnvelope {
             TxType::Eip4844 => Ok(TxEip4844Variant::rlp_decode_signed(buf)?.into()),
             TxType::Eip7702 => Ok(TxEip7702::rlp_decode_signed(buf)?.into()),
             TxType::Legacy => Err(Eip2718Error::UnexpectedType(0)),
+            TxType::LegacyExtended => Err(Eip2718Error::UnexpectedType(0)),
         }
     }
 
@@ -436,6 +468,9 @@ impl Encodable2718 for TxEnvelope {
             Self::Eip7702(tx) => {
                 tx.eip2718_encode(out);
             }
+            Self::LegacyExtended(tx) => {
+                tx.eip2718_encode(out);
+            }
         }
     }
 
@@ -446,6 +481,7 @@ impl Encodable2718 for TxEnvelope {
             Self::Eip1559(tx) => *tx.hash(),
             Self::Eip4844(tx) => *tx.hash(),
             Self::Eip7702(tx) => *tx.hash(),
+            Self::LegacyExtended(tx) => *tx.hash(),
         }
     }
 }
@@ -459,6 +495,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().chain_id(),
             Self::Eip4844(tx) => tx.tx().chain_id(),
             Self::Eip7702(tx) => tx.tx().chain_id(),
+            Self::LegacyExtended(tx) => tx.tx().chain_id(),
         }
     }
 
@@ -470,6 +507,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().nonce(),
             Self::Eip4844(tx) => tx.tx().nonce(),
             Self::Eip7702(tx) => tx.tx().nonce(),
+            Self::LegacyExtended(tx) => tx.tx().nonce(),
         }
     }
 
@@ -481,6 +519,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().gas_limit(),
             Self::Eip4844(tx) => tx.tx().gas_limit(),
             Self::Eip7702(tx) => tx.tx().gas_limit(),
+            Self::LegacyExtended(tx) => tx.tx().gas_limit(),
         }
     }
 
@@ -492,6 +531,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().gas_price(),
             Self::Eip4844(tx) => tx.tx().gas_price(),
             Self::Eip7702(tx) => tx.tx().gas_price(),
+            Self::LegacyExtended(tx) => tx.tx().gas_price(),
         }
     }
 
@@ -503,6 +543,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().max_fee_per_gas(),
             Self::Eip4844(tx) => tx.tx().max_fee_per_gas(),
             Self::Eip7702(tx) => tx.tx().max_fee_per_gas(),
+            Self::LegacyExtended(tx) => tx.tx().max_fee_per_gas(),
         }
     }
 
@@ -514,6 +555,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().max_priority_fee_per_gas(),
             Self::Eip4844(tx) => tx.tx().max_priority_fee_per_gas(),
             Self::Eip7702(tx) => tx.tx().max_priority_fee_per_gas(),
+            Self::LegacyExtended(tx) => tx.tx().max_priority_fee_per_gas(),
         }
     }
 
@@ -525,6 +567,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().max_fee_per_blob_gas(),
             Self::Eip4844(tx) => tx.tx().max_fee_per_blob_gas(),
             Self::Eip7702(tx) => tx.tx().max_fee_per_blob_gas(),
+            Self::LegacyExtended(tx) => tx.tx().max_fee_per_blob_gas(),
         }
     }
 
@@ -536,6 +579,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().priority_fee_or_price(),
             Self::Eip4844(tx) => tx.tx().priority_fee_or_price(),
             Self::Eip7702(tx) => tx.tx().priority_fee_or_price(),
+            Self::LegacyExtended(tx) => tx.tx().priority_fee_or_price(),
         }
     }
 
@@ -546,6 +590,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
             Self::Eip4844(tx) => tx.tx().effective_gas_price(base_fee),
             Self::Eip7702(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::LegacyExtended(tx) => tx.tx().effective_gas_price(base_fee),
         }
     }
 
@@ -557,6 +602,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
             Self::Eip4844(tx) => tx.tx().is_dynamic_fee(),
             Self::Eip7702(tx) => tx.tx().is_dynamic_fee(),
+            Self::LegacyExtended(tx) => tx.tx().is_dynamic_fee(),
         }
     }
 
@@ -568,6 +614,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().kind(),
             Self::Eip4844(tx) => tx.tx().kind(),
             Self::Eip7702(tx) => tx.tx().kind(),
+            Self::LegacyExtended(tx) => tx.tx().kind(),
         }
     }
 
@@ -579,6 +626,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().is_create(),
             Self::Eip4844(tx) => tx.tx().is_create(),
             Self::Eip7702(tx) => tx.tx().is_create(),
+            Self::LegacyExtended(tx) => tx.tx().is_create(),
         }
     }
 
@@ -590,6 +638,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().value(),
             Self::Eip4844(tx) => tx.tx().value(),
             Self::Eip7702(tx) => tx.tx().value(),
+            Self::LegacyExtended(tx) => tx.tx().value(),
         }
     }
 
@@ -601,6 +650,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().input(),
             Self::Eip4844(tx) => tx.tx().input(),
             Self::Eip7702(tx) => tx.tx().input(),
+            Self::LegacyExtended(tx) => tx.tx().input(),
         }
     }
 
@@ -612,6 +662,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().access_list(),
             Self::Eip4844(tx) => tx.tx().access_list(),
             Self::Eip7702(tx) => tx.tx().access_list(),
+            Self::LegacyExtended(tx) => tx.tx().access_list(),
         }
     }
 
@@ -623,6 +674,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().blob_versioned_hashes(),
             Self::Eip4844(tx) => tx.tx().blob_versioned_hashes(),
             Self::Eip7702(tx) => tx.tx().blob_versioned_hashes(),
+            Self::LegacyExtended(tx) => tx.tx().blob_versioned_hashes(),
         }
     }
 
@@ -633,6 +685,7 @@ impl Transaction for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().authorization_list(),
             Self::Eip4844(tx) => tx.tx().authorization_list(),
             Self::Eip7702(tx) => tx.tx().authorization_list(),
+            Self::LegacyExtended(tx) => tx.tx().authorization_list(),
         }
     }
 }
@@ -645,6 +698,7 @@ impl Typed2718 for TxEnvelope {
             Self::Eip1559(tx) => tx.tx().ty(),
             Self::Eip4844(tx) => tx.tx().ty(),
             Self::Eip7702(tx) => tx.tx().ty(),
+            Self::LegacyExtended(tx) => tx.tx().ty(),
         }
     }
 }
@@ -721,6 +775,8 @@ mod serde_from {
         Eip4844(Signed<TxEip4844Variant>),
         #[serde(rename = "0x4", alias = "0x04")]
         Eip7702(Signed<TxEip7702>),
+        #[serde(rename = "0x5", alias = "0x05")]
+        LegacyExtended(Signed<TxLegacy>),
     }
 
     impl From<MaybeTaggedTxEnvelope> for TxEnvelope {
@@ -740,6 +796,7 @@ mod serde_from {
                 TaggedTxEnvelope::Eip1559(signed) => Self::Eip1559(signed),
                 TaggedTxEnvelope::Eip4844(signed) => Self::Eip4844(signed),
                 TaggedTxEnvelope::Eip7702(signed) => Self::Eip7702(signed),
+                TaggedTxEnvelope::LegacyExtended(signed) => Self::LegacyExtended(signed),
             }
         }
     }
@@ -752,6 +809,7 @@ mod serde_from {
                 TxEnvelope::Eip1559(signed) => Self::Eip1559(signed),
                 TxEnvelope::Eip4844(signed) => Self::Eip4844(signed),
                 TxEnvelope::Eip7702(signed) => Self::Eip7702(signed),
+                TxEnvelope::LegacyExtended(signed) => Self::LegacyExtended(signed),
             }
         }
     }
@@ -831,6 +889,7 @@ mod tests {
         assert_eq!(TxType::Eip1559, TxType::Eip1559 as u8);
         assert_eq!(TxType::Eip7702, TxType::Eip7702 as u8);
         assert_eq!(TxType::Eip4844, TxType::Eip4844 as u8);
+        assert_eq!(TxType::LegacyExtended, TxType::LegacyExtended as u8);
     }
 
     #[test]
