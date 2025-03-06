@@ -35,6 +35,9 @@ pub use envelope::{TxEnvelope, TxType};
 mod legacy;
 pub use legacy::{from_eip155_value, to_eip155_value, TxLegacy};
 
+mod extended;
+pub use extended::TxExtended;
+
 mod rlp;
 #[doc(hidden)]
 pub use rlp::RlpEcdsaTx;

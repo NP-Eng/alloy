@@ -3,7 +3,7 @@
 use crate::{transaction::AccessList, BlobTransactionSidecar, Transaction, TransactionTrait};
 use alloy_consensus::{
     TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant, TxEip4844WithSidecar, TxEip7702, TxEnvelope,
-    TxLegacy, TxType, Typed2718, TypedTransaction,
+    TxExtended, TxLegacy, TxType, Typed2718, TypedTransaction,
 };
 use alloy_eips::eip7702::SignedAuthorization;
 use alloy_network_primitives::{TransactionBuilder4844, TransactionBuilder7702};
@@ -319,18 +319,8 @@ impl TransactionRequest {
     }
 
     // NP TODO
-    fn build_legacy_extended(self) -> Result<TxLegacy, &'static str> {
-        Ok(TxLegacy {
-            chain_id: self.chain_id,
-            nonce: self.nonce.ok_or("Missing 'nonce' field for legacy extended transaction.")?,
-            gas_price: self
-                .gas_price
-                .ok_or("Missing 'gas_price' for legacy extended transaction.")?,
-            gas_limit: self.gas.ok_or("Missing 'gas_limit' for legacy extended transaction.")?,
-            to: self.to.ok_or("Missing 'to' field for legacy extended transaction.")?,
-            value: self.value.unwrap_or_default(),
-            input: self.input.into_input().unwrap_or_default(),
-        })
+    fn build_legacy_extended(self) -> Result<TxExtended, &'static str> {
+        Ok(TxExtended {})
     }
 
     /// Build an EIP-1559 transaction.
@@ -812,6 +802,12 @@ impl From<TxLegacy> for TransactionRequest {
             transaction_type: Some(ty),
             ..Default::default()
         }
+    }
+}
+
+impl From<TxExtended> for TransactionRequest {
+    fn from(tx: TxExtended) -> Self {
+        unimplemented!()
     }
 }
 

@@ -3,7 +3,7 @@ use crate::{
         eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
         RlpEcdsaTx,
     },
-    Signed, Transaction, TxEip1559, TxEip2930, TxEip7702, TxLegacy,
+    Signed, Transaction, TxEip1559, TxEip2930, TxEip7702, TxLegacy, TxExtended,
 };
 use alloy_eips::{
     eip2718::{Decodable2718, Eip2718Error, Eip2718Result, Encodable2718},
@@ -184,10 +184,8 @@ pub enum TxEnvelope {
     Eip4844(Signed<TxEip4844Variant>),
     /// A [`TxEip7702`] tagged with type 4.
     Eip7702(Signed<TxEip7702>),
-    // NP TODO
-    /// NP TODO
-    /// A [`LegacyExtended`] tagged with type 5.
-    LegacyExtended(Signed<TxLegacy>),
+    /// A [`TxExtended`] tagged with type 5.
+    LegacyExtended(Signed<TxExtended>),
 }
 
 // NP TODO the ambiguity will solve itself
@@ -232,6 +230,12 @@ impl From<Signed<TxEip4844WithSidecar>> for TxEnvelope {
 impl From<Signed<TxEip7702>> for TxEnvelope {
     fn from(v: Signed<TxEip7702>) -> Self {
         Self::Eip7702(v)
+    }
+}
+
+impl From<Signed<TxExtended>> for TxEnvelope {
+    fn from(v: Signed<TxExtended>) -> Self {
+        Self::LegacyExtended(v)
     }
 }
 
@@ -328,8 +332,8 @@ impl TxEnvelope {
         }
     }
 
-    /// Returns the [`TxLegacy`] variant if the transaction is a legacy extended transaction.
-    pub const fn as_legacy_extended(&self) -> Option<&Signed<TxLegacy>> {
+    /// Returns the [`TxExtended`] variant if the transaction is a legacy extended transaction.
+    pub const fn as_legacy_extended(&self) -> Option<&Signed<TxExtended>> {
         match self {
             Self::LegacyExtended(tx) => Some(tx),
             _ => None,
@@ -714,7 +718,7 @@ mod serde_from {
     //!
     //! We serialize via [`TaggedTxEnvelope`] and deserialize via
     //! [`MaybeTaggedTxEnvelope`].
-    use crate::{Signed, TxEip1559, TxEip2930, TxEip4844Variant, TxEip7702, TxEnvelope, TxLegacy};
+    use crate::{Signed, TxEip1559, TxEip2930, TxEip4844Variant, TxEip7702, TxEnvelope, TxLegacy, TxExtended};
 
     #[derive(Debug, serde::Deserialize)]
     pub(crate) struct UntaggedLegacy {
@@ -776,7 +780,7 @@ mod serde_from {
         #[serde(rename = "0x4", alias = "0x04")]
         Eip7702(Signed<TxEip7702>),
         #[serde(rename = "0x5", alias = "0x05")]
-        LegacyExtended(Signed<TxLegacy>),
+        LegacyExtended(Signed<TxExtended>),
     }
 
     impl From<MaybeTaggedTxEnvelope> for TxEnvelope {

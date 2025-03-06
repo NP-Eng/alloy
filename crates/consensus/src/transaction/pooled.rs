@@ -2,7 +2,7 @@
 //! protocol.
 
 use crate::{
-    transaction::{RlpEcdsaTx, TxEip1559, TxEip2930, TxEip4844, TxLegacy},
+    transaction::{RlpEcdsaTx, TxEip1559, TxEip2930, TxEip4844, TxLegacy, TxExtended},
     SignableTransaction, Signed, Transaction, TxEip4844WithSidecar, TxEip7702, TxEnvelope, TxType,
 };
 use alloy_eips::{
@@ -39,7 +39,7 @@ pub enum PooledTransaction {
     /// A [`TxEip7702`] tagged with type 4.
     Eip7702(Signed<TxEip7702>),
     /// A [`LegacyExtended`] tagged with type 5.
-    LegacyExtended(Signed<TxLegacy>),
+    LegacyExtended(Signed<TxExtended>),
 }
 
 impl PooledTransaction {
@@ -180,7 +180,7 @@ impl PooledTransaction {
     }
 
     /// Returns the [`TxLegacy`] variant if the transaction is a LegacyExtended transaction.
-    pub const fn as_legacy_extended(&self) -> Option<&TxLegacy> {
+    pub const fn as_legacy_extended(&self) -> Option<&TxExtended> {
         match self {
             Self::LegacyExtended(tx) => Some(tx.tx()),
             _ => None,
@@ -234,7 +234,7 @@ impl PooledTransaction {
 
     /// NP TODO
     // NP TODO
-    pub fn try_into_legacy_extended(self) -> Result<Signed<TxLegacy>, Self> {
+    pub fn try_into_legacy_extended(self) -> Result<Signed<TxExtended>, Self> {
         match self {
             Self::LegacyExtended(tx) => Ok(tx),
             tx => Err(tx),

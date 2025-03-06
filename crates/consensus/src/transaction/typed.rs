@@ -3,7 +3,7 @@ use alloy_primitives::{Bytes, ChainId, TxKind, B256, U256};
 
 use crate::{
     transaction::eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
-    Transaction, TxEip1559, TxEip2930, TxEip7702, TxEnvelope, TxLegacy, TxType,
+    Transaction, TxEip1559, TxEip2930, TxEip7702, TxEnvelope, TxExtended, TxLegacy, TxType,
 };
 
 /// The TypedTransaction enum represents all Ethereum transaction request types.
@@ -40,14 +40,20 @@ pub enum TypedTransaction {
     /// EIP-7702 transaction
     #[cfg_attr(feature = "serde", serde(rename = "0x04", alias = "0x4"))]
     Eip7702(TxEip7702),
-    /// NP TODO
+    /// LegacyExtended transaction
     #[cfg_attr(feature = "serde", serde(rename = "0x05", alias = "0x5"))]
-    LegacyExtended(TxLegacy),
+    LegacyExtended(TxExtended),
 }
 
 impl From<TxLegacy> for TypedTransaction {
     fn from(tx: TxLegacy) -> Self {
         Self::Legacy(tx)
+    }
+}
+
+impl From<TxExtended> for TypedTransaction {
+    fn from(tx: TxExtended) -> Self {
+        Self::LegacyExtended(tx)
     }
 }
 
@@ -147,7 +153,7 @@ impl TypedTransaction {
     }
 
     /// Return the inner legacy extended transaction if it exists.
-    pub const fn legacy_extended(&self) -> Option<&TxLegacy> {
+    pub const fn legacy_extended(&self) -> Option<&TxExtended> {
         match self {
             Self::LegacyExtended(tx) => Some(tx),
             _ => None,
@@ -400,7 +406,9 @@ mod serde_from {
     //!
     //! We serialize via [`TaggedTypedTransaction`] and deserialize via
     //! [`MaybeTaggedTypedTransaction`].
-    use crate::{TxEip1559, TxEip2930, TxEip4844Variant, TxEip7702, TxLegacy, TypedTransaction};
+    use crate::{
+        TxEip1559, TxEip2930, TxEip4844Variant, TxEip7702, TxExtended, TxLegacy, TypedTransaction,
+    };
 
     #[derive(Debug, serde::Deserialize)]
     #[serde(untagged)]
@@ -434,7 +442,7 @@ mod serde_from {
         Eip7702(TxEip7702),
         /// LegacyExtended transaction
         #[serde(rename = "0x05", alias = "0x5")]
-        LegacyExtended(TxLegacy),
+        LegacyExtended(TxExtended),
     }
 
     impl From<MaybeTaggedTypedTransaction> for TypedTransaction {
