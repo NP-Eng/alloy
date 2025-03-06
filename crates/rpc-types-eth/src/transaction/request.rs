@@ -2,12 +2,13 @@
 
 use crate::{transaction::AccessList, BlobTransactionSidecar, Transaction, TransactionTrait};
 use alloy_consensus::{
-    TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant, TxEip4844WithSidecar, TxEip7702, TxEnvelope,
-    TxLegacy, TxType, Typed2718, TypedTransaction,
+    transaction::EXTENDED_COMMITMENT_BYTES, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
+    TxEip4844WithSidecar, TxEip7702, TxEnvelope, TxExtended, TxLegacy, TxType, Typed2718,
+    TypedTransaction,
 };
 use alloy_eips::eip7702::SignedAuthorization;
 use alloy_network_primitives::{TransactionBuilder4844, TransactionBuilder7702};
-use alloy_primitives::{Address, Bytes, ChainId, TxKind, B256, U256};
+use alloy_primitives::{Address, Bytes, ChainId, FixedBytes, TxKind, B256, U256};
 use core::hash::Hash;
 
 use alloc::{
@@ -133,6 +134,10 @@ pub struct TransactionRequest {
     /// Authorization list for for EIP-7702 transactions.
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
     pub authorization_list: Option<Vec<SignedAuthorization>>,
+    // NP TODO doc
+    /// NP TODO doc
+    #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
+    pub commitment: Option<FixedBytes<EXTENDED_COMMITMENT_BYTES>>,
 }
 
 impl TransactionRequest {
@@ -158,7 +163,7 @@ impl TransactionRequest {
         let authorization_list = tx.authorization_list().map(|l| l.to_vec());
         let blob_versioned_hashes = tx.blob_versioned_hashes().map(Vec::from);
         let tx_type = tx.ty();
-
+        let commitment = tx.commitment().cloned();
         // fees depending on the transaction type
         let (gas_price, max_fee_per_gas) = if tx.is_dynamic_fee() {
             (None, Some(tx.max_fee_per_gas()))
@@ -184,6 +189,7 @@ impl TransactionRequest {
             transaction_type: Some(tx_type),
             sidecar: None,
             authorization_list,
+            commitment,
         }
     }
 
@@ -318,18 +324,17 @@ impl TransactionRequest {
         })
     }
 
-    // NP TODO
-    fn build_legacy_extended(self) -> Result<TxLegacy, &'static str> {
-        Ok(TxLegacy {
+    fn build_extended(self) -> Result<TxExtended, &'static str> {
+        Ok(TxExtended {
             chain_id: self.chain_id,
-            nonce: self.nonce.ok_or("Missing 'nonce' field for legacy extended transaction.")?,
+            nonce: self.nonce.ok_or("Missing 'nonce' field for extended transaction.")?,
             gas_price: self
                 .gas_price
-                .ok_or("Missing 'gas_price' for legacy extended transaction.")?,
-            gas_limit: self.gas.ok_or("Missing 'gas_limit' for legacy extended transaction.")?,
-            to: self.to.ok_or("Missing 'to' field for legacy extended transaction.")?,
+                .ok_or("Missing 'gas_price' field for extended transaction.")?,
             value: self.value.unwrap_or_default(),
-            input: self.input.into_input().unwrap_or_default(),
+            commitment: self
+                .commitment
+                .expect("Missing 'commitment' field for extended transaction."),
         })
     }
 
@@ -543,7 +548,7 @@ impl TransactionRequest {
                 self.sidecar = None;
             }
             // NP TODO
-            TxType::LegacyExtended => {
+            TxType::Extended => {
                 self.max_fee_per_gas = None;
                 self.max_priority_fee_per_gas = None;
                 self.max_fee_per_blob_gas = None;
@@ -591,7 +596,7 @@ impl TransactionRequest {
             TxType::Eip1559 => self.complete_1559(),
             TxType::Eip4844 => self.complete_4844(),
             TxType::Eip7702 => self.complete_7702(),
-            TxType::LegacyExtended => self.complete_legacy_extended(),
+            TxType::Extended => self.complete_extended(),
         } {
             Err((pref, missing))
         } else {
@@ -687,7 +692,7 @@ impl TransactionRequest {
 
     /// Check if all necessary keys are present to build a legacy extended transaction,
     /// returning a list of keys that are missing.
-    pub fn complete_legacy_extended(&self) -> Result<(), Vec<&'static str>> {
+    pub fn complete_extended(&self) -> Result<(), Vec<&'static str>> {
         let mut missing = self.check_reqd_fields();
         self.check_legacy_fields(&mut missing);
 
@@ -708,7 +713,7 @@ impl TransactionRequest {
             TxType::Eip1559 => self.complete_1559().ok(),
             TxType::Eip4844 => self.complete_4844().ok(),
             TxType::Eip7702 => self.complete_7702().ok(),
-            TxType::LegacyExtended => self.complete_legacy_extended().ok(),
+            TxType::Extended => self.complete_extended().ok(),
         }?;
         Some(pref)
     }
@@ -729,7 +734,7 @@ impl TransactionRequest {
             // `sidecar` is a hard requirement since this must be a _sendable_ transaction.
             TxType::Eip4844 => self.build_4844_with_sidecar().expect("checked)").into(),
             TxType::Eip7702 => self.build_7702().expect("checked)").into(),
-            TxType::LegacyExtended => self.build_legacy_extended().expect("checked)").into(),
+            TxType::Extended => self.build_extended().expect("checked)").into(),
         })
     }
 
@@ -751,7 +756,7 @@ impl TransactionRequest {
             TxType::Eip1559 => self.clone().build_1559().map(Into::into),
             TxType::Eip4844 => self.clone().build_4844_variant().map(Into::into),
             TxType::Eip7702 => self.clone().build_7702().map(Into::into),
-            TxType::LegacyExtended => self.clone().build_legacy_extended().map(Into::into),
+            TxType::Extended => self.clone().build_extended().map(Into::into),
         }
         .map_err(|msg| self.into_tx_err(msg))
     }
@@ -812,6 +817,12 @@ impl From<TxLegacy> for TransactionRequest {
             transaction_type: Some(ty),
             ..Default::default()
         }
+    }
+}
+
+impl From<TxExtended> for TransactionRequest {
+    fn from(tx: TxExtended) -> Self {
+        unimplemented!()
     }
 }
 
@@ -956,7 +967,7 @@ impl From<TypedTransaction> for TransactionRequest {
             TypedTransaction::Eip1559(tx) => tx.into(),
             TypedTransaction::Eip4844(tx) => tx.into(),
             TypedTransaction::Eip7702(tx) => tx.into(),
-            TypedTransaction::LegacyExtended(tx) => tx.into(),
+            TypedTransaction::Extended(tx) => tx.into(),
         }
     }
 }
@@ -1049,7 +1060,7 @@ impl From<TxEnvelope> for TransactionRequest {
                     tx.strip_signature().into()
                 }
             }
-            TxEnvelope::LegacyExtended(tx) => {
+            TxEnvelope::Extended(tx) => {
                 #[cfg(feature = "k256")]
                 {
                     let from = tx.recover_signer().ok();

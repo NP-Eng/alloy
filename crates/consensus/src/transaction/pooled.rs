@@ -2,7 +2,7 @@
 //! protocol.
 
 use crate::{
-    transaction::{RlpEcdsaTx, TxEip1559, TxEip2930, TxEip4844, TxLegacy},
+    transaction::{RlpEcdsaTx, TxEip1559, TxEip2930, TxEip4844, TxExtended, TxLegacy},
     SignableTransaction, Signed, Transaction, TxEip4844WithSidecar, TxEip7702, TxEnvelope, TxType,
 };
 use alloy_eips::{
@@ -38,8 +38,8 @@ pub enum PooledTransaction {
     Eip4844(Signed<TxEip4844WithSidecar>),
     /// A [`TxEip7702`] tagged with type 4.
     Eip7702(Signed<TxEip7702>),
-    /// A [`LegacyExtended`] tagged with type 5.
-    LegacyExtended(Signed<TxLegacy>),
+    /// A [`Extended`] tagged with type 5.
+    Extended(Signed<TxExtended>),
 }
 
 impl PooledTransaction {
@@ -52,7 +52,7 @@ impl PooledTransaction {
             Self::Eip1559(tx) => tx.signature_hash(),
             Self::Eip7702(tx) => tx.signature_hash(),
             Self::Eip4844(tx) => tx.signature_hash(),
-            Self::LegacyExtended(tx) => tx.signature_hash(),
+            Self::Extended(tx) => tx.signature_hash(),
         }
     }
 
@@ -64,7 +64,7 @@ impl PooledTransaction {
             Self::Eip1559(tx) => tx.hash(),
             Self::Eip7702(tx) => tx.hash(),
             Self::Eip4844(tx) => tx.hash(),
-            Self::LegacyExtended(tx) => tx.hash(),
+            Self::Extended(tx) => tx.hash(),
         }
     }
 
@@ -76,7 +76,7 @@ impl PooledTransaction {
             Self::Eip1559(tx) => tx.signature(),
             Self::Eip7702(tx) => tx.signature(),
             Self::Eip4844(tx) => tx.signature(),
-            Self::LegacyExtended(tx) => tx.signature(),
+            Self::Extended(tx) => tx.signature(),
         }
     }
 
@@ -102,7 +102,7 @@ impl PooledTransaction {
             Self::Eip1559(tx) => tx.recover_signer(),
             Self::Eip4844(tx) => tx.recover_signer(),
             Self::Eip7702(tx) => tx.recover_signer(),
-            Self::LegacyExtended(tx) => tx.recover_signer(),
+            Self::Extended(tx) => tx.recover_signer(),
         }
     }
 
@@ -115,7 +115,7 @@ impl PooledTransaction {
             Self::Eip1559(tx) => tx.tx().encode_for_signing(out),
             Self::Eip4844(tx) => tx.tx().encode_for_signing(out),
             Self::Eip7702(tx) => tx.tx().encode_for_signing(out),
-            Self::LegacyExtended(tx) => tx.tx().encode_for_signing(out),
+            Self::Extended(tx) => tx.tx().encode_for_signing(out),
         }
     }
 
@@ -127,7 +127,7 @@ impl PooledTransaction {
             Self::Eip1559(tx) => tx.into(),
             Self::Eip7702(tx) => tx.into(),
             Self::Eip4844(tx) => tx.into(),
-            Self::LegacyExtended(tx) => tx.into(),
+            Self::Extended(tx) => tx.into(),
         }
     }
 
@@ -179,10 +179,10 @@ impl PooledTransaction {
         }
     }
 
-    /// Returns the [`TxLegacy`] variant if the transaction is a LegacyExtended transaction.
-    pub const fn as_legacy_extended(&self) -> Option<&TxLegacy> {
+    /// Returns the [`TxExtended`] variant if the transaction is a Extended transaction.
+    pub const fn as_extended(&self) -> Option<&TxExtended> {
         match self {
-            Self::LegacyExtended(tx) => Some(tx.tx()),
+            Self::Extended(tx) => Some(tx.tx()),
             _ => None,
         }
     }
@@ -234,9 +234,9 @@ impl PooledTransaction {
 
     /// NP TODO
     // NP TODO
-    pub fn try_into_legacy_extended(self) -> Result<Signed<TxLegacy>, Self> {
+    pub fn try_into_extended(self) -> Result<Signed<TxExtended>, Self> {
         match self {
-            Self::LegacyExtended(tx) => Ok(tx),
+            Self::Extended(tx) => Ok(tx),
             tx => Err(tx),
         }
     }
@@ -315,7 +315,7 @@ impl Encodable2718 for PooledTransaction {
             Self::Eip1559(tx) => tx.eip2718_encoded_length(),
             Self::Eip7702(tx) => tx.eip2718_encoded_length(),
             Self::Eip4844(tx) => tx.eip2718_encoded_length(),
-            Self::LegacyExtended(tx) => tx.eip2718_encoded_length(),
+            Self::Extended(tx) => tx.eip2718_encoded_length(),
         }
     }
 
@@ -326,7 +326,7 @@ impl Encodable2718 for PooledTransaction {
             Self::Eip1559(tx) => tx.eip2718_encode(out),
             Self::Eip7702(tx) => tx.eip2718_encode(out),
             Self::Eip4844(tx) => tx.eip2718_encode(out),
-            Self::LegacyExtended(tx) => tx.eip2718_encode(out),
+            Self::Extended(tx) => tx.eip2718_encode(out),
         }
     }
 
@@ -345,7 +345,7 @@ impl Decodable2718 for PooledTransaction {
             TxType::Legacy => Err(Eip2718Error::UnexpectedType(0)),
             // NP TODO should this be handled here or in fallback_decode?
             // NP TODO should this be decoded as RLP?
-            TxType::LegacyExtended => Err(Eip2718Error::UnexpectedType(0)),
+            TxType::Extended => Err(Eip2718Error::UnexpectedType(0)),
         }
     }
 
@@ -362,7 +362,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().chain_id(),
             Self::Eip7702(tx) => tx.tx().chain_id(),
             Self::Eip4844(tx) => tx.tx().chain_id(),
-            Self::LegacyExtended(tx) => tx.tx().chain_id(),
+            Self::Extended(tx) => tx.tx().chain_id(),
         }
     }
 
@@ -373,7 +373,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().nonce(),
             Self::Eip7702(tx) => tx.tx().nonce(),
             Self::Eip4844(tx) => tx.tx().nonce(),
-            Self::LegacyExtended(tx) => tx.tx().nonce(),
+            Self::Extended(tx) => tx.tx().nonce(),
         }
     }
 
@@ -384,7 +384,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().gas_limit(),
             Self::Eip7702(tx) => tx.tx().gas_limit(),
             Self::Eip4844(tx) => tx.tx().gas_limit(),
-            Self::LegacyExtended(tx) => tx.tx().gas_limit(),
+            Self::Extended(tx) => tx.tx().gas_limit(),
         }
     }
 
@@ -395,7 +395,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().gas_price(),
             Self::Eip7702(tx) => tx.tx().gas_price(),
             Self::Eip4844(tx) => tx.tx().gas_price(),
-            Self::LegacyExtended(tx) => tx.tx().gas_price(),
+            Self::Extended(tx) => tx.tx().gas_price(),
         }
     }
 
@@ -406,7 +406,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().max_fee_per_gas(),
             Self::Eip7702(tx) => tx.tx().max_fee_per_gas(),
             Self::Eip4844(tx) => tx.tx().max_fee_per_gas(),
-            Self::LegacyExtended(tx) => tx.tx().max_fee_per_gas(),
+            Self::Extended(tx) => tx.tx().max_fee_per_gas(),
         }
     }
 
@@ -417,7 +417,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().max_priority_fee_per_gas(),
             Self::Eip7702(tx) => tx.tx().max_priority_fee_per_gas(),
             Self::Eip4844(tx) => tx.tx().max_priority_fee_per_gas(),
-            Self::LegacyExtended(tx) => tx.tx().max_priority_fee_per_gas(),
+            Self::Extended(tx) => tx.tx().max_priority_fee_per_gas(),
         }
     }
 
@@ -428,7 +428,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().max_fee_per_blob_gas(),
             Self::Eip7702(tx) => tx.tx().max_fee_per_blob_gas(),
             Self::Eip4844(tx) => tx.tx().max_fee_per_blob_gas(),
-            Self::LegacyExtended(tx) => tx.tx().max_fee_per_blob_gas(),
+            Self::Extended(tx) => tx.tx().max_fee_per_blob_gas(),
         }
     }
 
@@ -439,7 +439,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().priority_fee_or_price(),
             Self::Eip7702(tx) => tx.tx().priority_fee_or_price(),
             Self::Eip4844(tx) => tx.tx().priority_fee_or_price(),
-            Self::LegacyExtended(tx) => tx.tx().priority_fee_or_price(),
+            Self::Extended(tx) => tx.tx().priority_fee_or_price(),
         }
     }
 
@@ -450,7 +450,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().effective_gas_price(base_fee),
             Self::Eip7702(tx) => tx.tx().effective_gas_price(base_fee),
             Self::Eip4844(tx) => tx.tx().effective_gas_price(base_fee),
-            Self::LegacyExtended(tx) => tx.tx().effective_gas_price(base_fee),
+            Self::Extended(tx) => tx.tx().effective_gas_price(base_fee),
         }
     }
 
@@ -461,7 +461,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().is_dynamic_fee(),
             Self::Eip7702(tx) => tx.tx().is_dynamic_fee(),
             Self::Eip4844(tx) => tx.tx().is_dynamic_fee(),
-            Self::LegacyExtended(tx) => tx.tx().is_dynamic_fee(),
+            Self::Extended(tx) => tx.tx().is_dynamic_fee(),
         }
     }
 
@@ -472,7 +472,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().kind(),
             Self::Eip7702(tx) => tx.tx().kind(),
             Self::Eip4844(tx) => tx.tx().kind(),
-            Self::LegacyExtended(tx) => tx.tx().kind(),
+            Self::Extended(tx) => tx.tx().kind(),
         }
     }
 
@@ -484,7 +484,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().is_create(),
             Self::Eip7702(tx) => tx.tx().is_create(),
             Self::Eip4844(tx) => tx.tx().is_create(),
-            Self::LegacyExtended(tx) => tx.tx().is_create(),
+            Self::Extended(tx) => tx.tx().is_create(),
         }
     }
 
@@ -495,7 +495,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().value(),
             Self::Eip7702(tx) => tx.tx().value(),
             Self::Eip4844(tx) => tx.tx().value(),
-            Self::LegacyExtended(tx) => tx.tx().value(),
+            Self::Extended(tx) => tx.tx().value(),
         }
     }
 
@@ -506,7 +506,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().input(),
             Self::Eip7702(tx) => tx.tx().input(),
             Self::Eip4844(tx) => tx.tx().input(),
-            Self::LegacyExtended(tx) => tx.tx().input(),
+            Self::Extended(tx) => tx.tx().input(),
         }
     }
 
@@ -517,7 +517,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().access_list(),
             Self::Eip7702(tx) => tx.tx().access_list(),
             Self::Eip4844(tx) => tx.tx().access_list(),
-            Self::LegacyExtended(tx) => tx.tx().access_list(),
+            Self::Extended(tx) => tx.tx().access_list(),
         }
     }
 
@@ -528,7 +528,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().blob_versioned_hashes(),
             Self::Eip7702(tx) => tx.tx().blob_versioned_hashes(),
             Self::Eip4844(tx) => tx.tx().blob_versioned_hashes(),
-            Self::LegacyExtended(tx) => tx.tx().blob_versioned_hashes(),
+            Self::Extended(tx) => tx.tx().blob_versioned_hashes(),
         }
     }
 
@@ -539,7 +539,7 @@ impl Transaction for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().authorization_list(),
             Self::Eip7702(tx) => tx.tx().authorization_list(),
             Self::Eip4844(tx) => tx.tx().authorization_list(),
-            Self::LegacyExtended(tx) => tx.tx().authorization_list(),
+            Self::Extended(tx) => tx.tx().authorization_list(),
         }
     }
 }
@@ -552,7 +552,7 @@ impl Typed2718 for PooledTransaction {
             Self::Eip1559(tx) => tx.tx().ty(),
             Self::Eip7702(tx) => tx.tx().ty(),
             Self::Eip4844(tx) => tx.tx().ty(),
-            Self::LegacyExtended(tx) => tx.tx().ty(),
+            Self::Extended(tx) => tx.tx().ty(),
         }
     }
 }

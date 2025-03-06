@@ -3,7 +3,7 @@
 use crate::Signed;
 use alloc::vec::Vec;
 use alloy_eips::{eip2930::AccessList, eip7702::SignedAuthorization};
-use alloy_primitives::{keccak256, Address, Bytes, ChainId, TxKind, B256, U256};
+use alloy_primitives::{keccak256, Address, Bytes, ChainId, FixedBytes, TxKind, B256, U256};
 use core::{any, fmt};
 
 mod eip1559;
@@ -36,7 +36,7 @@ mod legacy;
 pub use legacy::{from_eip155_value, to_eip155_value, TxLegacy};
 
 mod extended;
-pub use extended::TxExtended;
+pub use extended::{TxExtended, EXTENDED_COMMITMENT_BYTES};
 
 mod rlp;
 #[doc(hidden)]
@@ -199,6 +199,12 @@ pub trait Transaction: Typed2718 + fmt::Debug + any::Any + Send + Sync + 'static
     /// Returns `None` for non-eip7702 transactions.
     fn authorization_count(&self) -> Option<u64> {
         self.authorization_list().map(|auths| auths.len() as u64)
+    }
+
+    /// NP TODO doc
+    // NP TODO doc
+    fn commitment(&self) -> Option<&FixedBytes<EXTENDED_COMMITMENT_BYTES>> {
+        None
     }
 }
 

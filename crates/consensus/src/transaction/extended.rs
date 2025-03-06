@@ -8,10 +8,12 @@ use alloy_rlp::{length_of_length, BufMut, Decodable, Encodable, Header, Result};
 use core::mem;
 
 // NP TODO name? Coin? NoteCommitment?
-pub const COMMITMENT_BYTES: usize = 256 / 8;
+/// NP TODO doc
+// NP TODO doc
+pub const EXTENDED_COMMITMENT_BYTES: usize = 256 / 8;
 
 // NP TODO
-pub const GAS_COST: u64 = 1;
+const GAS_COST: u64 = 1;
 
 /// Legacy transaction.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
@@ -51,7 +53,7 @@ pub struct TxExtended {
     // NP TODO doc
     /// NP TODO doc
     // NP TODO name? Coin? NoteCommitment?
-    pub commitment: FixedBytes<COMMITMENT_BYTES>,
+    pub commitment: FixedBytes<EXTENDED_COMMITMENT_BYTES>,
 }
 
 impl TxExtended {
@@ -65,7 +67,7 @@ impl TxExtended {
         mem::size_of::<u64>() + // nonce
         mem::size_of::<u128>() + // gas_price
         mem::size_of::<U256>() + // value
-        COMMITMENT_BYTES // commitment
+        EXTENDED_COMMITMENT_BYTES // commitment
     }
 
     /// Outputs the length of EIP-155 fields. Only outputs a non-zero value for EIP-155 legacy
@@ -101,7 +103,10 @@ impl RlpEcdsaTx for TxExtended {
     const DEFAULT_TX_TYPE: u8 = { Self::TX_TYPE as u8 };
 
     fn rlp_encoded_fields_length(&self) -> usize {
-        self.nonce.length() + self.gas_price.length() + self.value.length() + COMMITMENT_BYTES
+        self.nonce.length()
+            + self.gas_price.length()
+            + self.value.length()
+            + EXTENDED_COMMITMENT_BYTES
     }
 
     fn rlp_encode_fields(&self, out: &mut dyn alloy_rlp::BufMut) {
@@ -327,7 +332,7 @@ impl SignableTransaction<Signature> for TxExtended {
 
 impl Typed2718 for TxExtended {
     fn ty(&self) -> u8 {
-        TxType::LegacyExtended as u8
+        TxType::Extended as u8
     }
 }
 
@@ -546,7 +551,7 @@ pub(super) mod serde_bincode_compat {
         nonce: u64,
         gas_price: u128,
         value: U256,
-        commitment: FixedBytes<COMMITMENT_BYTES>,
+        commitment: FixedBytes<EXTENDED_COMMITMENT_BYTES>,
     }
 
     impl From<&super::TxExtended> for TxExtended {
@@ -628,7 +633,7 @@ pub(super) mod serde_bincode_compat {
 #[cfg(test)]
 mod tests {
     use crate::{
-        transaction::{extended::COMMITMENT_BYTES, from_eip155_value, to_eip155_value},
+        transaction::{extended::EXTENDED_COMMITMENT_BYTES, from_eip155_value, to_eip155_value},
         SignableTransaction, TxExtended, TxLegacy,
     };
     use alloy_primitives::{

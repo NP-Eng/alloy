@@ -3,7 +3,7 @@ use alloy_primitives::{Bytes, ChainId, TxKind, B256, U256};
 
 use crate::{
     transaction::eip4844::{TxEip4844, TxEip4844Variant, TxEip4844WithSidecar},
-    Transaction, TxEip1559, TxEip2930, TxEip7702, TxEnvelope, TxLegacy, TxType,
+    Transaction, TxEip1559, TxEip2930, TxEip7702, TxEnvelope, TxExtended, TxLegacy, TxType,
 };
 
 /// The TypedTransaction enum represents all Ethereum transaction request types.
@@ -40,14 +40,20 @@ pub enum TypedTransaction {
     /// EIP-7702 transaction
     #[cfg_attr(feature = "serde", serde(rename = "0x04", alias = "0x4"))]
     Eip7702(TxEip7702),
-    /// NP TODO
+    /// Extended transaction
     #[cfg_attr(feature = "serde", serde(rename = "0x05", alias = "0x5"))]
-    LegacyExtended(TxLegacy),
+    Extended(TxExtended),
 }
 
 impl From<TxLegacy> for TypedTransaction {
     fn from(tx: TxLegacy) -> Self {
         Self::Legacy(tx)
+    }
+}
+
+impl From<TxExtended> for TypedTransaction {
+    fn from(tx: TxExtended) -> Self {
+        Self::Extended(tx)
     }
 }
 
@@ -95,7 +101,7 @@ impl From<TxEnvelope> for TypedTransaction {
             TxEnvelope::Eip1559(tx) => Self::Eip1559(tx.strip_signature()),
             TxEnvelope::Eip4844(tx) => Self::Eip4844(tx.strip_signature()),
             TxEnvelope::Eip7702(tx) => Self::Eip7702(tx.strip_signature()),
-            TxEnvelope::LegacyExtended(tx) => Self::LegacyExtended(tx.strip_signature()),
+            TxEnvelope::Extended(tx) => Self::Extended(tx.strip_signature()),
         }
     }
 }
@@ -110,7 +116,7 @@ impl TypedTransaction {
             Self::Eip1559(_) => TxType::Eip1559,
             Self::Eip4844(_) => TxType::Eip4844,
             Self::Eip7702(_) => TxType::Eip7702,
-            Self::LegacyExtended(_) => TxType::LegacyExtended,
+            Self::Extended(_) => TxType::Extended,
         }
     }
 
@@ -146,10 +152,10 @@ impl TypedTransaction {
         }
     }
 
-    /// Return the inner legacy extended transaction if it exists.
-    pub const fn legacy_extended(&self) -> Option<&TxLegacy> {
+    /// Return the inner extended transaction if it exists.
+    pub const fn extended(&self) -> Option<&TxExtended> {
         match self {
-            Self::LegacyExtended(tx) => Some(tx),
+            Self::Extended(tx) => Some(tx),
             _ => None,
         }
     }
@@ -164,7 +170,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.chain_id(),
             Self::Eip4844(tx) => tx.chain_id(),
             Self::Eip7702(tx) => tx.chain_id(),
-            Self::LegacyExtended(tx) => tx.chain_id(),
+            Self::Extended(tx) => tx.chain_id(),
         }
     }
 
@@ -176,7 +182,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.nonce(),
             Self::Eip4844(tx) => tx.nonce(),
             Self::Eip7702(tx) => tx.nonce(),
-            Self::LegacyExtended(tx) => tx.nonce(),
+            Self::Extended(tx) => tx.nonce(),
         }
     }
 
@@ -188,7 +194,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.gas_limit(),
             Self::Eip4844(tx) => tx.gas_limit(),
             Self::Eip7702(tx) => tx.gas_limit(),
-            Self::LegacyExtended(tx) => tx.gas_limit(),
+            Self::Extended(tx) => tx.gas_limit(),
         }
     }
 
@@ -200,7 +206,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.gas_price(),
             Self::Eip4844(tx) => tx.gas_price(),
             Self::Eip7702(tx) => tx.gas_price(),
-            Self::LegacyExtended(tx) => tx.gas_price(),
+            Self::Extended(tx) => tx.gas_price(),
         }
     }
 
@@ -212,7 +218,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.max_fee_per_gas(),
             Self::Eip4844(tx) => tx.max_fee_per_gas(),
             Self::Eip7702(tx) => tx.max_fee_per_gas(),
-            Self::LegacyExtended(tx) => tx.max_fee_per_gas(),
+            Self::Extended(tx) => tx.max_fee_per_gas(),
         }
     }
 
@@ -224,7 +230,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.max_priority_fee_per_gas(),
             Self::Eip4844(tx) => tx.max_priority_fee_per_gas(),
             Self::Eip7702(tx) => tx.max_priority_fee_per_gas(),
-            Self::LegacyExtended(tx) => tx.max_priority_fee_per_gas(),
+            Self::Extended(tx) => tx.max_priority_fee_per_gas(),
         }
     }
 
@@ -236,7 +242,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.max_fee_per_blob_gas(),
             Self::Eip4844(tx) => tx.max_fee_per_blob_gas(),
             Self::Eip7702(tx) => tx.max_fee_per_blob_gas(),
-            Self::LegacyExtended(tx) => tx.max_fee_per_blob_gas(),
+            Self::Extended(tx) => tx.max_fee_per_blob_gas(),
         }
     }
 
@@ -248,7 +254,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.priority_fee_or_price(),
             Self::Eip4844(tx) => tx.priority_fee_or_price(),
             Self::Eip7702(tx) => tx.priority_fee_or_price(),
-            Self::LegacyExtended(tx) => tx.priority_fee_or_price(),
+            Self::Extended(tx) => tx.priority_fee_or_price(),
         }
     }
 
@@ -259,7 +265,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.effective_gas_price(base_fee),
             Self::Eip4844(tx) => tx.effective_gas_price(base_fee),
             Self::Eip7702(tx) => tx.effective_gas_price(base_fee),
-            Self::LegacyExtended(tx) => tx.effective_gas_price(base_fee),
+            Self::Extended(tx) => tx.effective_gas_price(base_fee),
         }
     }
 
@@ -271,7 +277,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.is_dynamic_fee(),
             Self::Eip4844(tx) => tx.is_dynamic_fee(),
             Self::Eip7702(tx) => tx.is_dynamic_fee(),
-            Self::LegacyExtended(tx) => tx.is_dynamic_fee(),
+            Self::Extended(tx) => tx.is_dynamic_fee(),
         }
     }
 
@@ -283,7 +289,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.kind(),
             Self::Eip4844(tx) => tx.kind(),
             Self::Eip7702(tx) => tx.kind(),
-            Self::LegacyExtended(tx) => tx.kind(),
+            Self::Extended(tx) => tx.kind(),
         }
     }
 
@@ -295,7 +301,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.is_create(),
             Self::Eip4844(tx) => tx.is_create(),
             Self::Eip7702(tx) => tx.is_create(),
-            Self::LegacyExtended(tx) => tx.is_create(),
+            Self::Extended(tx) => tx.is_create(),
         }
     }
 
@@ -307,7 +313,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.value(),
             Self::Eip4844(tx) => tx.value(),
             Self::Eip7702(tx) => tx.value(),
-            Self::LegacyExtended(tx) => tx.value(),
+            Self::Extended(tx) => tx.value(),
         }
     }
 
@@ -319,7 +325,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.input(),
             Self::Eip4844(tx) => tx.input(),
             Self::Eip7702(tx) => tx.input(),
-            Self::LegacyExtended(tx) => tx.input(),
+            Self::Extended(tx) => tx.input(),
         }
     }
 
@@ -331,7 +337,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.access_list(),
             Self::Eip4844(tx) => tx.access_list(),
             Self::Eip7702(tx) => tx.access_list(),
-            Self::LegacyExtended(tx) => tx.access_list(),
+            Self::Extended(tx) => tx.access_list(),
         }
     }
 
@@ -343,7 +349,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.blob_versioned_hashes(),
             Self::Eip4844(tx) => tx.blob_versioned_hashes(),
             Self::Eip7702(tx) => tx.blob_versioned_hashes(),
-            Self::LegacyExtended(tx) => tx.blob_versioned_hashes(),
+            Self::Extended(tx) => tx.blob_versioned_hashes(),
         }
     }
 
@@ -355,7 +361,7 @@ impl Transaction for TypedTransaction {
             Self::Eip1559(tx) => tx.authorization_list(),
             Self::Eip4844(tx) => tx.authorization_list(),
             Self::Eip7702(tx) => tx.authorization_list(),
-            Self::LegacyExtended(tx) => tx.authorization_list(),
+            Self::Extended(tx) => tx.authorization_list(),
         }
     }
 }
@@ -368,7 +374,7 @@ impl Typed2718 for TypedTransaction {
             Self::Eip1559(tx) => tx.ty(),
             Self::Eip4844(tx) => tx.ty(),
             Self::Eip7702(tx) => tx.ty(),
-            Self::LegacyExtended(tx) => tx.ty(),
+            Self::Extended(tx) => tx.ty(),
         }
     }
 }
@@ -400,7 +406,9 @@ mod serde_from {
     //!
     //! We serialize via [`TaggedTypedTransaction`] and deserialize via
     //! [`MaybeTaggedTypedTransaction`].
-    use crate::{TxEip1559, TxEip2930, TxEip4844Variant, TxEip7702, TxLegacy, TypedTransaction};
+    use crate::{
+        TxEip1559, TxEip2930, TxEip4844Variant, TxEip7702, TxExtended, TxLegacy, TypedTransaction,
+    };
 
     #[derive(Debug, serde::Deserialize)]
     #[serde(untagged)]
@@ -432,9 +440,9 @@ mod serde_from {
         /// EIP-7702 transaction
         #[serde(rename = "0x04", alias = "0x4")]
         Eip7702(TxEip7702),
-        /// LegacyExtended transaction
+        /// Extended transaction
         #[serde(rename = "0x05", alias = "0x5")]
-        LegacyExtended(TxLegacy),
+        Extended(TxExtended),
     }
 
     impl From<MaybeTaggedTypedTransaction> for TypedTransaction {
@@ -454,7 +462,7 @@ mod serde_from {
                 TaggedTypedTransaction::Eip1559(signed) => Self::Eip1559(signed),
                 TaggedTypedTransaction::Eip4844(signed) => Self::Eip4844(signed),
                 TaggedTypedTransaction::Eip7702(signed) => Self::Eip7702(signed),
-                TaggedTypedTransaction::LegacyExtended(signed) => Self::LegacyExtended(signed),
+                TaggedTypedTransaction::Extended(signed) => Self::Extended(signed),
             }
         }
     }
@@ -467,7 +475,7 @@ mod serde_from {
                 TypedTransaction::Eip1559(signed) => Self::Eip1559(signed),
                 TypedTransaction::Eip4844(signed) => Self::Eip4844(signed),
                 TypedTransaction::Eip7702(signed) => Self::Eip7702(signed),
-                TypedTransaction::LegacyExtended(signed) => Self::LegacyExtended(signed),
+                TypedTransaction::Extended(signed) => Self::Extended(signed),
             }
         }
     }
