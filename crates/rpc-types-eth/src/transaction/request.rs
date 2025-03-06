@@ -822,7 +822,17 @@ impl From<TxLegacy> for TransactionRequest {
 
 impl From<TxExtended> for TransactionRequest {
     fn from(tx: TxExtended) -> Self {
-        unimplemented!()
+        let ty = tx.ty();
+        let TxExtended { chain_id, nonce, gas_price, value, commitment } = tx;
+        Self {
+            gas_price: Some(gas_price),
+            value: Some(value),
+            nonce: Some(nonce),
+            chain_id,
+            transaction_type: Some(ty),
+            commitment: Some(commitment),
+            ..Default::default()
+        }
     }
 }
 
