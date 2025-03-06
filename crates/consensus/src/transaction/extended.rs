@@ -527,7 +527,7 @@ pub(super) mod serde_bincode_compat {
     use serde::{Deserialize, Deserializer, Serialize, Serializer};
     use serde_with::{DeserializeAs, SerializeAs};
 
-    use super::COMMITMENT_BYTES;
+    use super::EXTENDED_COMMITMENT_BYTES;
 
     /// Bincode-compatible [`super::TxExtended`] serde implementation.
     ///
