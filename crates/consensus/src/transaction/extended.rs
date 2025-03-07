@@ -12,6 +12,9 @@ use core::mem;
 // NP TODO doc
 pub const EXTENDED_COMMITMENT_BYTES: usize = 256 / 8;
 
+// NP TODO is this the right location? Maybe alloy_primitives?
+pub type CommitmentBytes = FixedBytes<EXTENDED_COMMITMENT_BYTES>;
+
 // NP TODO
 const GAS_COST: u64 = 1;
 
@@ -53,7 +56,7 @@ pub struct TxExtended {
     // NP TODO doc
     /// NP TODO doc
     // NP TODO name? Coin? NoteCommitment?
-    pub commitment: FixedBytes<EXTENDED_COMMITMENT_BYTES>,
+    pub commitment: CommitmentBytes,
 }
 
 impl TxExtended {
@@ -551,7 +554,7 @@ pub(super) mod serde_bincode_compat {
         nonce: u64,
         gas_price: u128,
         value: U256,
-        commitment: FixedBytes<EXTENDED_COMMITMENT_BYTES>,
+        commitment: CommitmentBytes,
     }
 
     impl From<&super::TxExtended> for TxExtended {

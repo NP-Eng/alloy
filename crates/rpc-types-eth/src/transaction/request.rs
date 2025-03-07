@@ -2,13 +2,13 @@
 
 use crate::{transaction::AccessList, BlobTransactionSidecar, Transaction, TransactionTrait};
 use alloy_consensus::{
-    transaction::EXTENDED_COMMITMENT_BYTES, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
+    transaction::CommitmentBytes, TxEip1559, TxEip2930, TxEip4844, TxEip4844Variant,
     TxEip4844WithSidecar, TxEip7702, TxEnvelope, TxExtended, TxLegacy, TxType, Typed2718,
     TypedTransaction,
 };
 use alloy_eips::eip7702::SignedAuthorization;
 use alloy_network_primitives::{TransactionBuilder4844, TransactionBuilder7702};
-use alloy_primitives::{Address, Bytes, ChainId, FixedBytes, TxKind, B256, U256};
+use alloy_primitives::{Address, Bytes, ChainId, TxKind, B256, U256};
 use core::hash::Hash;
 
 use alloc::{
@@ -137,7 +137,7 @@ pub struct TransactionRequest {
     // NP TODO doc
     /// NP TODO doc
     #[cfg_attr(feature = "serde", serde(default, skip_serializing_if = "Option::is_none"))]
-    pub commitment: Option<FixedBytes<EXTENDED_COMMITMENT_BYTES>>,
+    pub commitment: Option<CommitmentBytes>,
 }
 
 impl TransactionRequest {

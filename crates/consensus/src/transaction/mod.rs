@@ -36,7 +36,7 @@ mod legacy;
 pub use legacy::{from_eip155_value, to_eip155_value, TxLegacy};
 
 mod extended;
-pub use extended::{TxExtended, EXTENDED_COMMITMENT_BYTES};
+pub use extended::{CommitmentBytes, TxExtended, EXTENDED_COMMITMENT_BYTES};
 
 mod rlp;
 #[doc(hidden)]
@@ -204,7 +204,7 @@ pub trait Transaction: Typed2718 + fmt::Debug + any::Any + Send + Sync + 'static
 
     /// NP TODO doc
     // NP TODO doc
-    fn commitment(&self) -> Option<&FixedBytes<EXTENDED_COMMITMENT_BYTES>> {
+    fn commitment(&self) -> Option<&CommitmentBytes> {
         None
     }
 }

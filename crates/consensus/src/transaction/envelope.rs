@@ -188,7 +188,6 @@ pub enum TxEnvelope {
     Extended(Signed<TxExtended>),
 }
 
-// NP TODO the ambiguity will solve itself
 impl From<Signed<TxLegacy>> for TxEnvelope {
     fn from(v: Signed<TxLegacy>) -> Self {
         Self::Legacy(v)
@@ -332,8 +331,8 @@ impl TxEnvelope {
         }
     }
 
-    /// Returns the [`TxExtended`] variant if the transaction is a legacy extended transaction.
-    pub const fn as_legacy_extended(&self) -> Option<&Signed<TxExtended>> {
+    /// Returns the [`TxExtended`] variant if the transaction is a extended transaction.
+    pub const fn as_extended(&self) -> Option<&Signed<TxExtended>> {
         match self {
             Self::Extended(tx) => Some(tx),
             _ => None,
