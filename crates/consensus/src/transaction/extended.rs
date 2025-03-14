@@ -16,7 +16,7 @@ pub const EXTENDED_COMMITMENT_BYTES: usize = 256 / 8;
 pub type CommitmentBytes = FixedBytes<EXTENDED_COMMITMENT_BYTES>;
 
 // NP TODO
-const GAS_COST: u64 = 1;
+pub const EXTENDED_GAS_COST: u64 = 1;
 
 /// Legacy transaction.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
@@ -232,7 +232,7 @@ impl Transaction for TxExtended {
 
     #[inline]
     fn gas_limit(&self) -> u64 {
-        GAS_COST
+        EXTENDED_GAS_COST
     }
 
     #[inline]

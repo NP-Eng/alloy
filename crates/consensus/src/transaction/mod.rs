@@ -36,7 +36,7 @@ mod legacy;
 pub use legacy::{from_eip155_value, to_eip155_value, TxLegacy};
 
 mod extended;
-pub use extended::{CommitmentBytes, TxExtended, EXTENDED_COMMITMENT_BYTES};
+pub use extended::{CommitmentBytes, TxExtended, EXTENDED_COMMITMENT_BYTES, EXTENDED_GAS_COST};
 
 mod rlp;
 #[doc(hidden)]
